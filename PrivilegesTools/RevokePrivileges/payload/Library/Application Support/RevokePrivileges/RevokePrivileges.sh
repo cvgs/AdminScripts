@@ -18,8 +18,7 @@ CommentBlock-StartandEND
 # The assumption here is that user 501 should be the sole admin. 
 # However any admin name can be added to the ${VALID_ADMINS[@]} array
 CONOLE_USER=$(stat -f "%Su" /dev/console)
-FIRST_ADMIN=$(id -nu 501)
-VALID_ADMINS=(root $FIRST_ADMIN)
+VALID_ADMINS=(root _jamfmgmt)
 # Default time as admin in seconds
 TIMEOUT_DEFAULT=600
 
@@ -106,7 +105,7 @@ Remove-AdminNestedGroup () {
 # Take a few minutes
 sleep $TIMER
 
-# We need to make sure to not de-privilege $FIRST_ADMIN
+# We need to make sure to not de-privilege $VALID_ADMINS
 if [ -f "/Applications/Privileges.app/Contents/Resources/PrivilegesCLI" ] && ! Check-Array VALID_ADMINS $CONOLE_USER; then
 	su "$CONOLE_USER" -c "/Applications/Privileges.app/Contents/Resources/PrivilegesCLI --remove"
 fi
