@@ -18,8 +18,8 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>StandardErrorPath</key>
-	<string>/tmp/com.peetinc.RevokePrivileges.stderr</string>
+	<string>/var/tmp/com.peetinc.RevokePrivileges.error.log</string>
 	<key>StandardOutPath</key>
-	<string>/tmp/com.peetinc.RevokePrivileges.stdout</string>
+	<string>/var/tmp/com.peetinc.RevokePrivileges.log</string>
 </dict>
 </plist>

@@ -7,20 +7,42 @@
 
 # Changelog                 
 2021.07.02                 Initial Checkin                 PJM
+2022.04.11                 Modifications                   csahm
+2023.02.17                 Modifications                   csahm
+2023.03.08                 Fixed DockToggleTimeout calc    csahm
+2023.10.12                 Updated comments                csahm
 
-#Desription
-This script revoke Privilige.app enabled user from admin group. The script accepts 1 arguemnt for $TIMER. The number of seconds before executing.
-We default to 10minutes for admin.
+#Description
+This script revoke Privilege.app enabled user from admin group. The script accepts 1 argument for $TIMER,
+the number of seconds before executing. This is intended for privileges removal after a reboot or directly
+after package installation (argument is 0)
 
+If the argument is missing. we use the managed preference DockToggleTimeout,
+and if that is missing or zero we default to 10 minutes like the default Privileges app.
+ 
 CommentBlock-StartandEND
 
 ### Variables 
-# The assumption here is that user 501 should be the sole admin. 
-# However any admin name can be added to the ${VALID_ADMINS[@]} array
-CONOLE_USER=$(stat -f "%Su" /dev/console)
+# Any user name can be added to the ${VALID_ADMINS[@]} array
+CONSOLE_USER=$(stat -f "%Su" /dev/console)
 VALID_ADMINS=(root _jamfmgmt)
+
 # Default time as admin in seconds
-TIMEOUT_DEFAULT=600
+DOCK_TOGGLE_TIMEOUT=$( defaults read \
+		"/Library/Managed Preferences/corp.sap.privileges" \
+		"DockToggleTimeout" )
+if [[ -n $DOCK_TOGGLE_TIMEOUT && $DOCK_TOGGLE_TIMEOUT -ge 0 ]]; then
+	TIMEOUT_DEFAULT=$(( DOCK_TOGGLE_TIMEOUT * 60 ))
+else
+	TIMEOUT_DEFAULT=600
+fi
+
+# Set admin time to $1 if provided, $TIMEOUT_DEFAULT if not
+if [ $# -ne 1 ]; then
+    TIMER=$TIMEOUT_DEFAULT
+else
+    TIMER=$1
+fi
 
 ## Runtime Variables
 ADMIN_UUID=($(dscl . -read Groups/admin GroupMembers  | cut -c 15-))
@@ -28,13 +50,6 @@ ADMIN_MEMBERS=($(dscl . -read Groups/admin GroupMembership | cut -c 18-))
 for U in "${VALID_ADMINS[@]}"; do
 	VALID_ADMINS_UUID+=($(dsmemberutil getuuid -U $U))
 done
-
-# Set admin time to $1 if provided, $TIMEOUT_DEFAULT if not
-if [ $# -ne 1 ]; then
-    TIMER=$TIMEOUT_DEFAULT
-    else
-    TIMER=$1
-fi
 
 ### Functions
 # This is a quick check if string is in the array (usage -- Check-Array ARRAY_NAME SEARCH_STRING)
@@ -106,8 +121,9 @@ Remove-AdminNestedGroup () {
 sleep $TIMER
 
 # We need to make sure to not de-privilege $VALID_ADMINS
-if [ -f "/Applications/Privileges.app/Contents/Resources/PrivilegesCLI" ] && ! Check-Array VALID_ADMINS $CONOLE_USER; then
-	su "$CONOLE_USER" -c "/Applications/Privileges.app/Contents/Resources/PrivilegesCLI --remove"
+if [ -f "/Applications/Privileges.app/Contents/Resources/PrivilegesCLI" ] && ! Check-Array VALID_ADMINS $CONSOLE_USER; then
+	su "$CONSOLE_USER" -c "/Applications/Privileges.app/Contents/Resources/PrivilegesCLI --remove"
+	echo "WARNING: Removed Privileges for ${CONSOLE_USER}."
 fi
 
 # Remove ${VALID_ADMINS_UUID[@]} from ${ADMIN_UUID[@]}
@@ -125,7 +141,6 @@ for del in "${ADMIN_UUID[@]}"; do
 	echo "WARNING: Removed UUID $del from GroupMembers in admin group."
 done
 
-
 # Remove ${VALID_ADMINS[@]} from ${ADMIN_MEMBERS[@]}
 for target in "${VALID_ADMINS[@]}"; do
   for i in "${!ADMIN_MEMBERS[@]}"; do
@@ -138,7 +153,7 @@ done
 # Finally remove all ${UNIQUE_MEMBERS[@]} from the admin group
 for del in "${ADMIN_MEMBERS[@]}"; do
 	/usr/sbin/dseditgroup -o edit -d $del -t user admin
-	echo "WARNING: Removed $del from admin group"
+	echo "WARNING: Removed $del from admin group."
 done
 
 Remove-AdminNestedGroup

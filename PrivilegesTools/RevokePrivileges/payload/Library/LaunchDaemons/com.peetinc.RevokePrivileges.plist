@@ -12,5 +12,9 @@
 	<array>
 		<string>/var/db/dslocal/nodes/Default/groups/admin.plist</string>
 	</array>
+	<key>StandardErrorPath</key>
+	<string>/var/tmp/com.peetinc.RevokePrivileges.error.log</string>
+	<key>StandardOutPath</key>
+	<string>/var/tmp/com.peetinc.RevokePrivileges.log</string>
 </dict>
 </plist>
